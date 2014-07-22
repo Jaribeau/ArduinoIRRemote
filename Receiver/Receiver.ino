@@ -43,8 +43,9 @@
 
 
 byte ledMatrixStates [] = {1, 1, 1, 1, 1, 1, 1, 1, 1};
-String serialIn;
 int ledScrollState = 0;
+String serialIn;
+int serialQueCount, charIn;
 
   
 /* Steup Function */
@@ -91,7 +92,16 @@ void interruptHandle() {
 
 //Function to read the serial, and take appropriate action on the LEDs
 void refreshState(){
+  
   //Read serial, do stuff
+  int serialQueCount = Serial.available();
+    if(serialQueCount > 0){
+      while(serialQueCount--){
+        charIn = Serial.read();
+        serialIn += charIn;
+        Serial.print((char)charIn);
+      }
+    }
   
 }//End of refreshState()
 
