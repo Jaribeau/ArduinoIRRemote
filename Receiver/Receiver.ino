@@ -102,6 +102,7 @@ void refreshState(){
         Serial.print((char)charIn);
       }
     }
+    
   
 }//End of refreshState()
 
