@@ -34,12 +34,12 @@ void loop() {
 void interruptHandle() {
   //Check for which button pressed and send corresponding IR code
   if(digitalRead(4))
-     Serial.send("0x10");    //send power IR code
+     Serial.write("0x10/r");    //send power IR code
   else if(digitalRead(5))
-     Serial.send("0x20");        //send volume up IR code
+     Serial.write("0x20/r");        //send volume up IR code
   else if(digitalRead(6))
-     Serial.send("0x30");        //send volume down IR code
+     Serial.write("0x30/r");        //send volume down IR code
   else if(digitalRead(7))
-     Serial.send("0x40");        //send mute IR code
+     Serial.write("0x40/r");        //send mute IR code
 
 }//End of interruptHandle()
