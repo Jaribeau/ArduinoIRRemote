@@ -53,16 +53,11 @@ boolean mute = 0;
 /* Initialization for Arduino Sleep */
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
-int ledPin = 13; // LED connected to digital pin 13
 int sleepPin = 12; // active LOW
-int interruptPin = 10; // LED to show the action of a interrupt
 int wakePin = 2; // active LOW, ground this pin momentary to wake up
 int sleepStatus = 0; // variable to store a request for sleep
 
 
-
-
-  
 /* Steup Function */
 void setup() {
   
@@ -81,9 +76,7 @@ void setup() {
   //attachInterrupt(0, interruptHandle, HIGH);
 
   /* Arduino Sleep Setup */
-  pinMode(ledPin, OUTPUT); // sets the digital pin as output
   pinMode(interruptPin, OUTPUT);
-  pinMode(sleepPin, INPUT); // sets the digital pin as input
   pinMode(wakePin, INPUT);
 
   /* Enable an interrupt. In the function call 
@@ -117,22 +110,13 @@ void loop() {
     ledScrollState = 1;
 
   /* Arduino sleep code */
-  // sets the LED on
-  digitalWrite(ledPin, HIGH);
-  // waits for a second        
-  delay(1000);
-  // sets the LED off                         
-  digitalWrite(ledPin, LOW);
-  // waits for a second           
-  delay(1000);
   // read sleep pin here. only active                          
   sleepStatus = digitalRead(sleepPin);
   //when blink led is off, start to put the device in sleep, call sleep function                                       
-  if (sleepStatus == LOW) {
+  if (sleepStatus == LOW) 
     sleepNow();
-  }
+    
 }//End of loop()
-
 
 
 /* Interrupt Handle */
