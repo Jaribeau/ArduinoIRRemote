@@ -20,11 +20,11 @@
   */
     
   /***  LED MATRIX SCHEMATIC LAYOUT  *** (This takes precidence over the paper copy)
-  * Row1/Pin 14 - (LED 1) -- (LED 2) -- (LED 3)
-  * Row2/Pin 15 - (LED 4) -- (LED 5) -- (LED 6)
-  * Row3/Pin 16 - (LED 7) -- (LED 8) -- (LED 9)
+  * Row1/Pin 8  - (LED 1) -- (LED 2) -- (LED 3)
+  * Row2/Pin 9  - (LED 4) -- (LED 5) -- (LED 6)
+  * Row3/Pin 10 - (LED 7) -- (LED 8) -- (LED 9)
   *                  |          |          |
-  *                Pin17      Pin18      Pin19
+  *                Pin11      Pin12      Pin13
   *                 Col1       Col2       Col3 
   * 
   * LED 1: Red power/status LED, bottom of volume bar/always on (except when sleeping)
@@ -34,18 +34,21 @@
 
 #define ON 1
 #define OFF 0
-#define row1 14
-#define row2 15
-#define row3 16
-#define col1 17
-#define col2 18
-#define col3 19
+#define row1 8
+#define row2 9
+#define row3 10
+#define col1 11
+#define col2 12
+#define col3 13
 
 
 byte ledMatrixStates [] = {1, 1, 1, 1, 1, 1, 1, 1, 1};
 int ledScrollState = 0;
 String serialIn;
 int serialQueCount, charIn;
+int volume = 0;
+boolean power = 0;
+boolean mute = 0;
 
   
 /* Steup Function */
@@ -60,8 +63,8 @@ void setup() {
   pinMode(row3, OUTPUT);
   pinMode(col1, OUTPUT);
   pinMode(col2, OUTPUT);
-  pinMode(col3, OUTPUT);   
-          
+  pinMode(col3, OUTPUT);    
+  
   //Init interrupt
   //attachInterrupt(0, interruptHandle, HIGH);
   
@@ -91,18 +94,89 @@ void interruptHandle() {
 
 
 //Function to read the serial, and take appropriate action on the LEDs
-void refreshState(){
-  
-  //Read serial, do stuff
-  int serialQueCount = Serial.available();
-    if(serialQueCount > 0){
-      while(serialQueCount--){
+void refreshState()
+{  
+      //Read serial
+      while(Serial.available())
+      {  
+        //While serial buffer contains messages
         charIn = Serial.read();
-        serialIn += charIn;
-        Serial.print((char)charIn);
+        serialIn += (char)charIn;  //Move character from serial buffer to String in working memory
       }
-    }
+      
+      //If full command is received (">" is end command character, update LED state matrix)
+      if(serialIn.indexOf('>') >= 0)
+      {  
+        //Print command received to serial for testing
+        //Serial.print("Test:");
+        //Serial.print(serialIn);
+        //Serial.println(".");
+        
+        //Update variable corresponding to command received
+        if(serialIn.equals("Yellow>"))
+          power = !power;
+        else if(serialIn == "Red>" && volume < 8)
+        {
+            volume++;
+            mute = false;
+        }
+        else if(serialIn.equals("Green>") && volume > 0)
+        {
+            volume--;
+            mute = false;
+        }
+        else if(serialIn.equals("Blue>"))
+        {
+          mute = !mute;
+        }
+        
+        serialIn = ""; //Clear serial string variable in wrking memory
+        
+        ////Update states of LEDs
+        
+          //Set all volume LEDs status to off
+          for(int x = 1; x <= 8; x++)
+            ledMatrixStates[x] = 0;
+            
+          //Make volume LEDs on = volume
+          for(int x = 0; x <= volume; x++)
+            ledMatrixStates[x] = 1;
+            
+
     
+        //Update volume LEDs, all turned off if mute is enabled
+        if(mute)
+        {
+          //Set all volume LEDs status to off
+          for(int x = 1; x <= 8; x++)
+            ledMatrixStates[x] = 0;
+        }
+        
+        /*
+        //Update power LED
+        if(power)
+        {
+          ledMatrixStates[0] = 1;  //Set power LED state to ON
+        }
+        else
+        {
+          //Set all volume LEDs status to off
+          for(int x = 1; x < 9; x++)
+            ledMatrixStates[x] = 0;
+        }
+        */
+                    
+        //Print out LED states
+        for(int x = 0; x <= 8; x++)
+        {
+            Serial.print(ledMatrixStates[x]);
+            Serial.print(", ");
+        }
+        Serial.println();
+        Serial.println(mute);
+    
+      }//End of command actions   
+      
   
 }//End of refreshState()
 
@@ -113,40 +187,40 @@ void scrollLEDMatrix(int nextLEDToFlash){
   
   switch (nextLEDToFlash) {
     case 1:
-      digitalWrite(row1, ledMatrixStates[0]);  //Sets the corresponding row to the state of the LED (whether or not it should be on)
-      digitalWrite(col1, !ledMatrixStates[0]); //Sets the corresponding column to the !state (opposite since this is the ground line of the LEDs) of the LED (whether or not it should be on)
+      digitalWrite(row1, !ledMatrixStates[0]);  //Sets the corresponding row to the state of the LED (whether or not it should be on)
+      digitalWrite(col1, ledMatrixStates[0]); //Sets the corresponding column to the !state (opposite since this is the ground line of the LEDs) of the LED (whether or not it should be on)
       break;
     case 2:
-      digitalWrite(row1, ledMatrixStates[1]);
-      digitalWrite(col2, !ledMatrixStates[1]);
+      digitalWrite(row1, !ledMatrixStates[1]);
+      digitalWrite(col2, ledMatrixStates[1]);
       break;
     case 3:
-      digitalWrite(row1, ledMatrixStates[2]);
-      digitalWrite(col3, !ledMatrixStates[2]);
+      digitalWrite(row1, !ledMatrixStates[2]);
+      digitalWrite(col3, ledMatrixStates[2]);
       break;
     case 4:
-      digitalWrite(row2, ledMatrixStates[3]);
-      digitalWrite(col1, !ledMatrixStates[3]);
+      digitalWrite(row2, !ledMatrixStates[3]);
+      digitalWrite(col1, ledMatrixStates[3]);
       break;
     case 5:
-      digitalWrite(row2, ledMatrixStates[4]);
-      digitalWrite(col2, !ledMatrixStates[4]);
+      digitalWrite(row2, !ledMatrixStates[4]);
+      digitalWrite(col2, ledMatrixStates[4]);
       break;
     case 6:
-      digitalWrite(row2, ledMatrixStates[5]);
-      digitalWrite(col3, !ledMatrixStates[5]);
+      digitalWrite(row2, !ledMatrixStates[5]);
+      digitalWrite(col3, ledMatrixStates[5]);
       break;
     case 7:
-      digitalWrite(row3, ledMatrixStates[6]);
-      digitalWrite(col1, !ledMatrixStates[6]);
+      digitalWrite(row3, !ledMatrixStates[6]);
+      digitalWrite(col1, ledMatrixStates[6]);
       break;
     case 8:
-      digitalWrite(row3, ledMatrixStates[7]);
-      digitalWrite(col2, !ledMatrixStates[7]);
+      digitalWrite(row3, !ledMatrixStates[7]);
+      digitalWrite(col2, ledMatrixStates[7]);
       break;
     case 9:
-      digitalWrite(row3, ledMatrixStates[8]);
-      digitalWrite(col3, !ledMatrixStates[8]);
+      digitalWrite(row3, !ledMatrixStates[8]);
+      digitalWrite(col3, ledMatrixStates[8]);
       ledScrollState = 0;  //Reset scroll counter
       break;
    }
@@ -154,10 +228,10 @@ void scrollLEDMatrix(int nextLEDToFlash){
 
 void setAllLEDsLow(){
   //Set all LED rows low and columns high (off)
-    digitalWrite(row1, LOW);
-    digitalWrite(row2, LOW);
-    digitalWrite(row3, LOW);
-    digitalWrite(col1, HIGH);
-    digitalWrite(col2, HIGH);
-    digitalWrite(col3, HIGH);
+    digitalWrite(row1, HIGH);
+    digitalWrite(row2, HIGH);
+    digitalWrite(row3, HIGH);
+    digitalWrite(col1, LOW);
+    digitalWrite(col2, LOW);
+    digitalWrite(col3, LOW);
 }//End of setAllLEDsLow()
