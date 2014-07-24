@@ -63,15 +63,5 @@ void loop()
 /* Interrupt Handle for button presses ****************************/
 void interruptHandle() 
 {
-  Serial.write('x');
-  //Check for which button pressed and send corresponding IR code
-  if(digitalRead(powerButton))
-     command = "0x10>"; //power code
-  else if(digitalRead(volumeUp))
-     command = "0x20>";    //send volume up IR code
-  else if(digitalRead(volumeDown))
-     command = "0x30>";    //send volume down IR code
-  else if(digitalRead(mute))
-     command = "0x40>";    //send mute IR code
 
 }//End of interruptHandle()

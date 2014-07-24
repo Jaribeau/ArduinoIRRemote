@@ -70,7 +70,13 @@ void setup() {
   pinMode(row3, OUTPUT);
   pinMode(col1, OUTPUT);
   pinMode(col2, OUTPUT);
-  pinMode(col3, OUTPUT);    
+  pinMode(col3, OUTPUT); 
+  
+  pinMode(7, OUTPUT);  
+  digitalWrite(7, HIGH);  
+
+  //Enable wakeUp interrupt
+  attachInterrupt(0,wakeUpNow, HIGH);   
 
 }//End of setup()
 
@@ -85,16 +91,16 @@ void loop() {
   scrollLEDMatrix(ledScrollState);
   ledScrollState++;
   if(ledScrollState > 9)
-    ledScrollState = 1;
-
+    ledScrollState = 1;  
   
-    
 }//End of loop()
 
 
 /* Interrupt Handle */
-void interruptHandle() {
+void wakeUpNow() {
   //Wake up or sleep arduino on interrupt
+  digitalWrite(7, LOW);
+  
 }//End of interruptHandle()
 
 
@@ -273,8 +279,4 @@ void sleepNow()
   // first thing arduino does after waking from sleep: disable sleep
   sleep_disable();             
   PRR = PRR & 0b00000000;  //Re-enables Timer/Counter0 to resume functionality
-         
-    delay(1000);                 
-  // turn off the interrupt LED
-
 }
