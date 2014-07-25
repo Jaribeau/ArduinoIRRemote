@@ -42,25 +42,24 @@
 #define col3 13
 
 
-byte ledMatrixStates [] = {1, 1, 1, 1, 1, 1, 1, 1, 1};
+byte ledMatrixStates [] = {1, 1, 1, 1, 1, 0, 0, 0, 0};
 int ledScrollState = 0;
 String serialIn;
-int serialQueCount, charIn;
+int charIn;
 int volume = 0;
-boolean power = 0;
 boolean mute = 0;
+boolean asleep = 0;
 
 /* Initialization for Arduino Sleep */
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
 int sleepPin = 12; // active LOW
 int wakePin = 2; // active LOW, ground this pin momentary to wake up
-int sleepStatus = 0; // variable to store a request for sleep
 
 
 /* Steup Function */
-void setup() {
-  
+void setup() 
+{
   //Init IR Serial and RX pin
   Serial.begin(2400);  //Start serial with baud rate of 2400
   
@@ -71,36 +70,40 @@ void setup() {
   pinMode(col1, OUTPUT);
   pinMode(col2, OUTPUT);
   pinMode(col3, OUTPUT); 
-  
-  pinMode(7, OUTPUT);  
-  digitalWrite(7, HIGH);  
 
   //Enable wakeUp interrupt
-  attachInterrupt(0,wakeUpNow, HIGH);   
+  attachInterrupt(0,handle, RISING);   
 
 }//End of setup()
 
 
 
-/* Main Loop */
+/*********** Main Loop ************/
 void loop() {
+        
+  //Sleep arduino if asleep flag is high
+  if(asleep)
+    sleepNow();
   
   refreshState(); //Function to read the serial, and take appropriate action on the LEDs
   
   setAllLEDsLow();
   scrollLEDMatrix(ledScrollState);
+  
   ledScrollState++;
   if(ledScrollState > 9)
     ledScrollState = 1;  
+    
+    delay(1); //Allow the LEDs time to turn on
   
 }//End of loop()
 
 
 /* Interrupt Handle */
-void wakeUpNow() {
-  //Wake up or sleep arduino on interrupt
-  digitalWrite(7, LOW);
-  
+void handle() {
+  //Arduino wakes up as soon as external interrupt triggered.
+  //Sleep arduino on button press, unless just waking up
+  asleep = !asleep;
 }//End of interruptHandle()
 
 
@@ -118,11 +121,6 @@ void refreshState()
       //If full command is received (">" is end command character, update LED state matrix)
       if(serialIn.indexOf('>') >= 0)
       {  
-        //Print command received to serial for testing
-        //Serial.print("Test:");
-        //Serial.print(serialIn);
-        //Serial.println(".");
-        
         //Update variable corresponding to command received
         if(serialIn.equals("Yellow>"))
         {
@@ -143,43 +141,31 @@ void refreshState()
           mute = !mute;
         }
         
-        serialIn = ""; //Clear serial string variable in wrking memory
+        //Clear serial string variable in working memory
+        serialIn = ""; 
         
-        ////Update states of LEDs
         
-          //Set all volume LEDs status to off
-          for(int x = 1; x <= 8; x++)
+        /********Update states of LEDs*********/
+        
+        //Set all volume LEDs status to off to clear
+        for(int x = 1; x <= 8; x++)
             ledMatrixStates[x] = 0;
             
-          //Make volume LEDs on = volume
-          for(int x = 0; x <= volume; x++)
+        //Make volume LEDs on = volume
+        for(int x = 0; x <= volume; x++)
             ledMatrixStates[x] = 1;
             
-
-    
-        //Update volume LEDs, all turned off if mute is enabled
+        //Turn off volume LEDs if mute is enabled
         if(mute)
         {
           //Set all volume LEDs status to off
           for(int x = 1; x <= 8; x++)
             ledMatrixStates[x] = 0;
         }
-        
+          
         /*
-        //Update power LED
-        if(power)
-        {
-          ledMatrixStates[0] = 1;  //Set power LED state to ON
-        }
-        else
-        {
-          //Set all volume LEDs status to off
-          for(int x = 1; x < 9; x++)
-            ledMatrixStates[x] = 0;
-        }
-        */
-                    
-        //Print out LED states
+        //TEST BLOCK          
+        //Print out LED states for testing
         for(int x = 0; x <= 8; x++)
         {
             Serial.print(ledMatrixStates[x]);
@@ -187,18 +173,17 @@ void refreshState()
         }
         Serial.println();
         Serial.println(mute);
+        */
     
-      }//End of command actions   
-      
-  
+      }//End of command actions
 }//End of refreshState()
 
 
-
 /****** Function to update the state (on if it's matrixState is on, off if off) of a given LED */
-void scrollLEDMatrix(int nextLEDToFlash){
-  
-  switch (nextLEDToFlash) {
+void scrollLEDMatrix(int nextLEDToFlash)
+{
+  switch (nextLEDToFlash) 
+  {
     case 1:
       digitalWrite(row1, !ledMatrixStates[0]);  //Sets the corresponding row to the state of the LED (whether or not it should be on)
       digitalWrite(col1, ledMatrixStates[0]); //Sets the corresponding column to the !state (opposite since this is the ground line of the LEDs) of the LED (whether or not it should be on)
@@ -252,31 +237,22 @@ void setAllLEDsLow(){
 
 void sleepNow()         
 {
-  /* 
-
-
-  In the avr/sleep.h file, the call names of each sleep modus are found:
-  The 5 different modes are:
-  **SLEEP_MODE_IDLE**       -the least power savings 
-    SLEEP_MODE_ADC
-    SLEEP_MODE_PWR_SAVE
-    SLEEP_MODE_STANDBY
-    SLEEP_MODE_PWR_DOWN     -the most power savings
-  Want as much power savings as possible, so use SLEEP_MODE_PWR_DOWN
-  */
-
   setAllLEDsLow();
-  Serial.println("Going to sleeeeeeep!!");
+  Serial.println("Going to sleeeep!!");
   
-  // sleep mode is set here
+  //IDLE mode set so that serial remains enabled and can be used to wake arduino
   set_sleep_mode(SLEEP_MODE_IDLE);
-
-  // enables the sleep bit in the mcucr register so sleep is possible. a safety pin.
-  sleep_enable();
-  delay(1000);
-  PRR = PRR | 0b00100000;  //Disables Timer/Counter0 to prevent waking up
-  sleep_mode();                
-  // first thing arduino does after waking from sleep: disable sleep
-  sleep_disable();             
+  
+  //Enable the sleep bit in the MCUCR register so sleep is possible (MCUCR = Microcontroller Control Register)
+  sleep_enable();  
+  delay(500);
+  PRR = PRR | 0b00100000;  //Disables Timer/Counter0 to prevent waking up  (PRR = Power Reduction Register)
+  sleep_mode();       
+  
+  /************* CODE RESUMES HERE ON WAKE UP *****************/
+  
+  //Disable sleep mode bit
+  sleep_disable();       
+  asleep = false;  
   PRR = PRR & 0b00000000;  //Re-enables Timer/Counter0 to resume functionality
 }
